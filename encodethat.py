@@ -7,6 +7,7 @@ from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.popup import Popup
 
 #fx to simplify ui creation
 class uiElementHandler():
@@ -18,8 +19,9 @@ class uiElementHandler():
         v_align = 'middle'
         return Label(text=str(title), font_size=fsize, size_hint=shint, pos_hint=phint, halign = h_align, valign=v_align)
 
-    def makeBtn(self,title, phint, callback, enableBtn=None, shint=None):
-        fsize = 40                 #Default font size
+    def makeBtn(self,title, phint, callback, enableBtn=None, shint=None, fsize=None):
+        if(fsize==None):
+            fsize = 40                 #Default font size
         if(shint==None):
             shint = (0.3,0.2)        #Size 25% of screen size, width height
         if(enableBtn==None):
@@ -30,17 +32,17 @@ class uiElementHandler():
 class mainScreen(Screen):
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
-        uiHdl = uiElementHandler
+        uiHdl = uiElementHandler()
         self.eList = []
         self.layout = FloatLayout()
-        self.lblTitle = uiHdl.makeLbl(uiHdl,"[color=#baed91]Encode[/color] that!", {"x":0.25,"top":0.9}, fsize=70)
+        self.lblTitle = uiHdl.makeLbl("[color=#baed91]Encode[/color] that!", {"x":0.25,"top":0.9}, fsize=70)
         self.lblTitle.markup = True
         self.eList.append(self.lblTitle)
-        self.btnStart = uiHdl.makeBtn(uiHdl,"Start", {"x":0.25,"top":0.6}, self.startGameScreen, enableBtn=True, shint=(0.5,0.15))
+        self.btnStart = uiHdl.makeBtn("Start", {"x":0.25,"top":0.6}, self.startGameScreen, enableBtn=True, shint=(0.5,0.15))
         self.eList.append(self.btnStart)
-        self.btnSettings = uiHdl.makeBtn(uiHdl,"Settings", {"x":0.25,"top":0.4}, self.startSettingsScreen,enableBtn=True, shint=(0.5,0.15))
+        self.btnSettings = uiHdl.makeBtn("Settings", {"x":0.25,"top":0.4}, self.startSettingsScreen,enableBtn=True, shint=(0.5,0.15))
         self.eList.append(self.btnSettings)
-        self.btnQuit = uiHdl.makeBtn(uiHdl,"Quit", {"x":0.25,"top":0.2}, self.exitGame,enableBtn=True, shint=(0.5,0.15))
+        self.btnQuit = uiHdl.makeBtn("Quit", {"x":0.25,"top":0.2}, self.exitGame,enableBtn=True, shint=(0.5,0.15))
         self.eList.append(self.btnQuit)
 
         for k in self.eList:
@@ -86,7 +88,7 @@ class gameScreen(Screen):
         self.add_widget(self.layout)
 
     def initUIElem(self,eList):     #Layout, element_list
-        self.uiHandle = uiElementHandler();
+        self.uiHandle = uiElementHandler()
         #Score
         self.lblScore = self.uiHandle.makeLbl("Score: 000000", {"x":0, "top":1})
         eList.append(self.lblScore)
@@ -129,15 +131,35 @@ class gameScreen(Screen):
             shint=(0.5,0.15)
         )
         eList.append(self.btnGo)
+
+        self.btnPause = self.uiHandle.makeBtn(
+            'Menu',
+            {"x":0.4,"top":1},
+            self.pausePress,
+            enableBtn = True,
+            shint=(0.2,0.1),
+            fsize=30
+        )
+        eList.append(self.btnPause)
+
         return eList
 
     def dotPress(self, instance):
-        self.elemList[3].text += "•"
+        self.setUserText("•",self.elemList[3])
         self.trackBtnTime()
 
     def dashPress(self, instance):
-        self.elemList[3].text += "—"
+        self.setUserText("—",self.elemList[3])
         self.trackBtnTime()
+
+    def setUserText(self, text, lbl):
+        lbl.text += text
+        if(len(lbl.text)>5):
+            self.resetTypedText(lbl)   #Reset text after more than 5 char
+
+    #Clear text
+    def resetTypedText(self, lbl):
+        lbl.text = ""
 
     def goPress(self, instance):
         #Change game title, countdown from 3 then start
@@ -148,6 +170,45 @@ class gameScreen(Screen):
         #Hide go btn
         self.elemList[6].disabled = True
         self.elemList[6].opacity = 0
+
+    def pausePress(self, instance):
+        emList = []
+        popupLayout = FloatLayout()
+        btnResume = self.uiHandle.makeBtn(
+        'Resume',
+        {"x":0.25, "top":0.9},  #Right ends at 0.5 of screen
+        self.resumePress,
+        shint=(0.5,0.4),
+        enableBtn=True
+        )
+        emList.append(btnResume)
+
+        btnQuit = self.uiHandle.makeBtn(
+        'Quit',
+        {"x":0.25, "top":0.45},  #Right ends at 0.5 of screen
+        self.quitPress,
+        shint=(0.5,0.4),
+        enableBtn=True
+        )
+        emList.append(btnQuit)
+
+        for el in emList:
+            popupLayout.add_widget(el)
+
+        self.popupMenu = Popup(title='Game Paused',
+            content=popupLayout,
+            size_hint=(None, None), size=(400, 250),
+            auto_dismiss=False)
+        self.popupMenu.open()
+
+    def resumePress(self,instance):
+        self.popupMenu.dismiss()
+
+    def quitPress(self,instance):
+        self.popupMenu.dismiss()
+        self.manager.transition.direction = 'right'
+        self.manager.current = "main_screen"
+
 
     #Duration to countdown, seconds
     #Label to update
@@ -166,7 +227,7 @@ class gameScreen(Screen):
                 self.t -= 1
             else:
                 self.elemList[2].text = self.textAfterTimer
-                self.elemList[3].text = ""  #Set player text as empty
+                self.resetTypedText(self.elemList[3])           #Set player text as empty
                 self.textAfterTimer = None  #Empty text
                 Clock.unschedule(self.onUpdateTime) #Stop timer
 
