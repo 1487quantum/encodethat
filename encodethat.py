@@ -29,7 +29,7 @@ class uiElementHandler():
         return Button(text=title,font_size=fsize,size_hint=shint, pos_hint = phint, on_press=callback, disabled=not enableBtn)
 
 #Home screen
-class mainScreen(Screen):
+class MainScreen(Screen):
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
         uiHdl = uiElementHandler()
@@ -63,13 +63,22 @@ class mainScreen(Screen):
         App.get_running_app().stop()
         Window.close()
 
-class gameScreen(Screen):
+class GameScreen(Screen):
     elemList = []
 
+
     #Timer
-    startCountdown = False
+    cTimerActive = False                   #Countdown timer state
+    pauseTimer = False
+    timeLeft = 0                           #Time left before timer expiry
+
+    #Timer activity identifier ID constants
+    READY_COUNTDOWN = 156                #ID for countdown before game start
+    GAME_COUNTDOWN = 201                #ID for main game countdown
+
+    #Game var
+    DURATION_GAME = 60                 #Game duration
     gameActive = False
-    textAfterTimer = None
 
     #Button timing/setting
     isBtnTimerActive = False
@@ -94,7 +103,7 @@ class gameScreen(Screen):
         eList.append(self.lblScore)
 
         #Score
-        self.lblTimer = self.uiHandle.makeLbl("Timer: 120", {"x":0.5, "top":1})
+        self.lblTimer = self.uiHandle.makeLbl("Timer: 000", {"x":0.5, "top":1})
         eList.append(self.lblTimer)
 
         #Word to code
@@ -145,6 +154,7 @@ class gameScreen(Screen):
         return eList
 
     def dotPress(self, instance):
+        print('\a')
         self.setUserText("•",self.elemList[3])
         self.trackBtnTime()
 
@@ -161,9 +171,28 @@ class gameScreen(Screen):
     def resetTypedText(self, lbl):
         lbl.text = ""
 
+
+
+    def resetGame(self):
+        if(self.cTimerActive):
+            Clock.unschedule(self.onUpdateTime) #Stop timer
+            self.cTimerActive = False
+        self.elemList[1].text = "Timer: 000"
+        self.elemList[2].text = '{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin...")
+        #Enable main btns
+        self.elemList[4].disabled = True
+        self.elemList[5].disabled = True
+        #Hide go btn
+        self.elemList[6].disabled = False
+        self.elemList[6].opacity = 100
+
+
+    #       BUTTON CALLBACK(S)
+
     def goPress(self, instance):
         #Change game title, countdown from 3 then start
-        self.countdownTime(3,"Ready?","Go!")
+        self.elemList[2].text = "Ready?"
+        self.countdownTime(3,self.READY_COUNTDOWN)
         #Enable main btns
         self.elemList[4].disabled = False
         self.elemList[5].disabled = False
@@ -172,6 +201,8 @@ class gameScreen(Screen):
         self.elemList[6].opacity = 0
 
     def pausePress(self, instance):
+        if(self.cTimerActive):
+            self.pauseTimer = True
         emList = []
         popupLayout = FloatLayout()
         btnResume = self.uiHandle.makeBtn(
@@ -199,37 +230,53 @@ class gameScreen(Screen):
             content=popupLayout,
             size_hint=(None, None), size=(400, 250),
             auto_dismiss=False)
+
         self.popupMenu.open()
 
     def resumePress(self,instance):
+        if(self.cTimerActive):
+            self.pauseTimer = False
         self.popupMenu.dismiss()
 
     def quitPress(self,instance):
         self.popupMenu.dismiss()
         self.manager.transition.direction = 'right'
         self.manager.current = "main_screen"
+        self.resetGame()
 
+    #       TIMER(S)
 
     #Duration to countdown, seconds
     #Label to update
-    def countdownTime(self,tm,start_text,endtext):
-        self.t = tm
-        self.elemList[2].text = start_text
-        self.startCountdown = True
-        self.textAfterTimer = endtext
+    def countdownTime(self,tm, call_id):
+        self.timeLeft = tm
+        self.countdown_act_id = call_id         #Register current
+        self.cTimerActive = True
+        self.pauseTimer = False
         Clock.schedule_interval(self.onUpdateTime, 1) #Refresh every 1s
 
     def onUpdateTime(self, dt): #Refresh duration -> dt
         #self.elemList[2].text = 'Time: {:03d}'.format(self.t)
-        if(self.startCountdown):
-            if(self.t!=0):
-                self.elemList[2].text = str(self.t)
-                self.t -= 1
+        if(self.cTimerActive):
+            if(self.timeLeft!=0):
+                if(self.countdown_act_id == self.READY_COUNTDOWN):
+                    self.elemList[2].text = str(self.timeLeft)
+                elif(self.countdown_act_id == self.GAME_COUNTDOWN):
+                    self.elemList[1].text = "Timer: "+str(self.timeLeft)
+
+                if(not self.pauseTimer):
+                    self.timeLeft -= 1
             else:
-                self.elemList[2].text = self.textAfterTimer
-                self.resetTypedText(self.elemList[3])           #Set player text as empty
-                self.textAfterTimer = None  #Empty text
                 Clock.unschedule(self.onUpdateTime) #Stop timer
+                if(self.countdown_act_id == self.READY_COUNTDOWN):
+                    self.elemList[2].text = "Begin!"
+                    self.resetTypedText(self.elemList[3])                           #Set player text as empty
+                    self.countdownTime(self.DURATION_GAME,self.GAME_COUNTDOWN)    #Start game timer
+                elif(self.countdown_act_id == self.READY_COUNTDOWN):
+                    self.timeLeft -= 1
+                    self.elemList[1].text = "Timer: "+str(self.timeLeft)
+                    self.elemList[2].text = "Game Over"
+
 
     #Keep track of button press
     def trackBtnTime(self):
@@ -249,18 +296,17 @@ class gameScreen(Screen):
                 Clock.unschedule(self.btnTimeTrackUpdate)
 
 
-
 class encodeThat(App):
     #Set screen size
-    sWidth = 800
-    sHeight = 500
+    SWIDTH = 800
+    SHEIGHT = 500
 
     def build(self):
-        Window.size = (self.sWidth, self.sHeight)    #Set window size
+        Window.size = (self.SWIDTH, self.SHEIGHT)    #Set window size
         self.title = "Encode that!"
         sm = ScreenManager()
-        ms = mainScreen(name="main_screen")
-        gs = gameScreen(name="game_screen")
+        ms = MainScreen(name="main_screen")
+        gs = GameScreen(name="game_screen")
         #st = SettingsScreen(name='settings_screen')
         sm.add_widget(ms)
         sm.add_widget(gs)
