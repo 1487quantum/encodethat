@@ -42,7 +42,7 @@ class MorseSM(sm.SM):
             else:
                 res = self.fsmTree[state][int(inp)], inp
         else:
-            res = 'Idle', None
+            res = None, None
         return res
 
     def getCharacter(self, codeStr):
