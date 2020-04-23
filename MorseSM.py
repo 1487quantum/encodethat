@@ -45,7 +45,6 @@ class MorseSM(sm.SM):
             res = 'Idle', None
         return res
 
-
     def getCharacter(self, codeStr):
         if(len(codeStr)<6): #Accept only less than 5 numbers and numbers only
             if(codeStr.isdigit()):
@@ -68,9 +67,7 @@ class MorseSM(sm.SM):
                 res.append(res_char)
         return res
 
-gg = MorseSM()
-gg.testAllCharacters()
-print(gg.getCharacter("010111"))
-print(gg.getCharacter("011@"))
-print(gg.getCharacter("011"))
-print(gg.getCharacter("01112"))
+    def exceptionTest(self):                    #Test error catching
+        res = ["010111","011@","011","01112"]
+        for el in res:
+            print('Test','Pass->' if len(gg.getCharacter(el))==1 else 'Fail->',gg.getCharacter(el))
