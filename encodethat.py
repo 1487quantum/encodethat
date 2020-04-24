@@ -146,6 +146,13 @@ class GameScreen(Screen):
         self.showKeyGoBtn(False,True)
 
     #=================================#
+    #       GAME STATE
+    #=================================#
+    def pauseGameState(self, stateActive):
+        if(self.cTimerActive):
+            self.pauseTimer = stateActive
+
+    #=================================#
     #       BUTTON CALLBACK(S)
     #=================================#
     def dotPress(self, instance):
@@ -162,9 +169,9 @@ class GameScreen(Screen):
         self.loadWordList()
         self.showKeyGoBtn(False,False)
 
+
     def pausePress(self, instance):
-        if(self.cTimerActive):
-            self.pauseTimer = True
+        self.pauseGameState(True)
         emList = []
         #  New layout for dialog box
         popupLayout = FloatLayout()
@@ -178,8 +185,7 @@ class GameScreen(Screen):
         self.popupMenu.open()
 
     def resumePress(self,instance):
-        if(self.cTimerActive):
-            self.pauseTimer = False
+        self.pauseGameState(False)
         self.popupMenu.dismiss()
 
     def quitPress(self,instance):
@@ -204,8 +210,9 @@ class GameScreen(Screen):
         self.WORDS_TOLOAD-=1
         return self.wordList.pop(rd_num)
 
-    def setNewWord(self):
+    def nextWord(self):
         self.lblTestWord.text = "[color={}]{}[/color]".format("#FFFFFF",self.pickRandomWord())
+        self.resetTypedText([self.lblCodeOut])                       #Reset Users text
 
     def decodeString(self, targetString):
         if(targetString!=None):
@@ -239,7 +246,6 @@ class GameScreen(Screen):
                     if(self.timeLeft==0):
                         self.lblTestWord.text = "Begin!"
                         self.lblTimer.text = "Timer: ---"
-                        self.showKeyGoBtn(True,False)
                     else:
                         self.lblTestWord.text = str(self.timeLeft)
                 elif(self.countdown_act_id == self.GAME_COUNTDOWN):
@@ -256,7 +262,8 @@ class GameScreen(Screen):
                     self.resetTypedText([self.lblCodeOut,self.lblTestWord,self.lblUser])                                           #Set player text as empty
                     self.readyEvent.cancel() #Stop timer
                     self.lblTimer.text = "Timer: %03d"%(self.DURATION_GAME)
-                    self.setNewWord()
+                    self.nextWord()
+                    self.showKeyGoBtn(True,False)                                                   #Enable keys
                     self.gameEvent = self.countdownTime(self.DURATION_GAME-1,self.GAME_COUNTDOWN)    #Start game timer
                 if(self.countdown_act_id == self.READY_COUNTDOWN):
                     self.gameEvent.cancel()                                                         #Stop Game timer
@@ -285,9 +292,8 @@ class GameScreen(Screen):
                 mainWord = MarkupLabel(self.lblTestWord.text).markup[1]
                 if(len(self.lblCodeOut.text)>len(mainWord)):
                     #Get new word, Reset text
-                    self.setNewWord()
-                    self.resetTypedText([self.lblCodeOut])                       #Reset Users text
-                elif(len(self.lblCodeOut.text)>0):                              #Highlight correct/wrong char
+                    self.nextWord()
+                elif(len(self.lblCodeOut.text)>0):                              #Highlight correct/wrong
                     self.lblScore.text = str(mainWord[len(self.lblCodeOut.text)-1])
                     if(mainWord[len(self.lblCodeOut.text)-1]==decodedChar):    #Extract text from markup, then extract char at index
                         textHighlight = "#baed91"               #Correct, green
@@ -296,10 +302,15 @@ class GameScreen(Screen):
                         textHighlight = "#ff6961"               #Wrong, red
                     self.lblTestWord.text = "[color={}]{}[/color]".format(textHighlight,mainWord)
                     self.lblScore.text = "Score: %05d"%self.game_totalScore
-                    print("[color={}]{}[/color]".format(textHighlight,mainWord))
+                    print(len(self.lblCodeOut.text),len(mainWord))
+                    if(len(self.lblCodeOut.text)==len(mainWord)):         #Check if it's last word
+                        self.beforeNextWord = Clock.schedule_once(self.loadNextWord,0.5)                     #Wait for 0.5 second before showing next word
                 self.isBtnTimerActive = False
                 Clock.unschedule(self.btnTimeTrackUpdate)
 
+    def loadNextWord(self,dt):
+        self.nextWord()
+        Clock.unschedule(self.beforeNextWord)   #Unschedule clock once done
 
 class encodeThat(App):
     #Set screen size
