@@ -3,6 +3,7 @@ from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.core.text.markup import MarkupLabel
 from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.clock import Clock
@@ -59,8 +60,6 @@ class MainScreen(Screen):
         Window.close()
 
 class GameScreen(Screen):
-    elemList = []
-
     #Timer
     cTimerActive = False                   #Countdown timer state
     pauseTimer = False
@@ -71,25 +70,26 @@ class GameScreen(Screen):
     GAME_COUNTDOWN = 201                #ID for main game countdown
 
     #Game var
-    DURATION_GAME = 30                 #Game duration
-    WORDS_TOLOAD = 100                #Number of words to load
+    DURATION_GAME = 120                  #Game duration
+    WORDS_TOLOAD = 100                  #Number of words to load
     gameActive = False
+    game_totalScore = 0
 
     #Button timing/setting
     isBtnTimerActive = False
     timeAfterPress = 0
-    btnTimerUpdateInterval = 100 #How often the timer updates
-    timeSpacing = 300      #Wait n milliseconds before resting text
+    btnTimerUpdateInterval = 100         #How often the timer updates
+    timeSpacing = 300                   #Wait n milliseconds before resting text
 
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
         self.layout = FloatLayout()
-        elemList = self.initUIElem(elemList)      #Add UI elements
-        for el in elemList:                       #Add widgets to layout
+        for el in self.initUIElem():                       #Add UI elements, then Add widgets to layout from list
             self.layout.add_widget(el)
         self.add_widget(self.layout)
 
-    def initUIElem(self,eList):     #Layout, element_list
+    def initUIElem(self):       #Layout, element_list
+        eList = []              #Temp list
         self.uiHandle = uiElementHandler()
         self.lblScore = self.uiHandle.makeLbl("Score: 000000", {"x":0, "top":1})        #Score
         eList.append(self.lblScore)
@@ -112,13 +112,9 @@ class GameScreen(Screen):
         eList.append(self.btnPause)
         return eList
 
-    def dotPress(self, instance):
-        print('\a')
-        self.setPlayerKeys("•")
-
-    def dashPress(self, instance):
-        self.setPlayerKeys("—")
-
+    #=================#
+    #       UI
+    #================#
     def setPlayerKeys(self,text):
         self.setUserText(text,self.lblUser)
         self.trackBtnTime()
@@ -152,6 +148,12 @@ class GameScreen(Screen):
     #=================================#
     #       BUTTON CALLBACK(S)
     #=================================#
+    def dotPress(self, instance):
+        print('\a')
+        self.setPlayerKeys("•")
+
+    def dashPress(self, instance):
+        self.setPlayerKeys("—")
 
     def goPress(self, instance):
         #Change game title, countdown from 3 then start
@@ -172,8 +174,8 @@ class GameScreen(Screen):
         emList.append(btnQuit)
         for el in emList:
             popupLayout.add_widget(el)
-        popupMenu = Popup(title='Game Paused',content=popupLayout,size_hint=(None, None), size=(400, 250),auto_dismiss=False)     #Show Dialog box
-        popupMenu.open()
+        self.popupMenu = Popup(title='Game Paused',content=popupLayout,size_hint=(None, None), size=(400, 250),auto_dismiss=False)     #Show Dialog box
+        self.popupMenu.open()
 
     def resumePress(self,instance):
         if(self.cTimerActive):
@@ -186,9 +188,9 @@ class GameScreen(Screen):
         self.manager.current = "main_screen"
         self.resetGame()
 
-    #========================#
-    #       GAME DATA
-    #========================#
+    #==============================#
+    #       DATA MANIPULATION
+    #==============================#
     def loadWordList(self):
         f = open("wordlist.txt", "r")
         self.wordList =  []                    #New list to store words
@@ -200,8 +202,10 @@ class GameScreen(Screen):
     def pickRandomWord(self):
         rd_num = rd.randint(0,self.WORDS_TOLOAD-1)
         self.WORDS_TOLOAD-=1
-        self.lblScore.text =str(self.WORDS_TOLOAD)
         return self.wordList.pop(rd_num)
+
+    def setNewWord(self):
+        self.lblTestWord.text = "[color={}]{}[/color]".format("#FFFFFF",self.pickRandomWord())
 
     def decodeString(self, targetString):
         if(targetString!=None):
@@ -244,9 +248,6 @@ class GameScreen(Screen):
                         self.lblTimer.text = "Timer: ---"
                         self.showKeyGoBtn(False,False)
                     else:
-                        if(len(self.lblCodeOut.text)>=len(self.lblTestWord.text)):
-                            self.lblTestWord.text = self.pickRandomWord()
-                            self.lblCodeOut.text = ""
                         self.lblTimer.text = "Timer: %03d"%(self.timeLeft)
                 if(not self.pauseTimer):
                     self.timeLeft -= 1
@@ -255,11 +256,12 @@ class GameScreen(Screen):
                     self.resetTypedText([self.lblCodeOut,self.lblTestWord,self.lblUser])                                           #Set player text as empty
                     self.readyEvent.cancel() #Stop timer
                     self.lblTimer.text = "Timer: %03d"%(self.DURATION_GAME)
+                    self.setNewWord()
                     self.gameEvent = self.countdownTime(self.DURATION_GAME-1,self.GAME_COUNTDOWN)    #Start game timer
                 if(self.countdown_act_id == self.READY_COUNTDOWN):
                     self.gameEvent.cancel()                                                         #Stop Game timer
 
-    #Keep track of button press
+    #Keep track of button press, and to cross check if the character is decoded correctly
     def trackBtnTime(self):
         #Reset timing
         self.timeAfterPress = self.timeSpacing
@@ -277,7 +279,24 @@ class GameScreen(Screen):
                 if(decodedChar!=None):                                 #Only add valid characters
                     #self.lblCodeOut.text += ("[color=#E5D209]{}[/color]".format(decodedChar)) if decodedChar!="Idle" else ""
                     self.lblCodeOut.text += ("{}".format(decodedChar)) if len(decodedChar)<=1 else ""
-                self.lblUser.text = ""                          #Reset Users text
+                self.resetTypedText([self.lblUser])                       #Reset Users text
+
+                #Check text
+                mainWord = MarkupLabel(self.lblTestWord.text).markup[1]
+                if(len(self.lblCodeOut.text)>len(mainWord)):
+                    #Get new word, Reset text
+                    self.setNewWord()
+                    self.resetTypedText([self.lblCodeOut])                       #Reset Users text
+                elif(len(self.lblCodeOut.text)>0):                              #Highlight correct/wrong char
+                    self.lblScore.text = str(mainWord[len(self.lblCodeOut.text)-1])
+                    if(mainWord[len(self.lblCodeOut.text)-1]==decodedChar):    #Extract text from markup, then extract char at index
+                        textHighlight = "#baed91"               #Correct, green
+                        self.game_totalScore+=10
+                    else:
+                        textHighlight = "#ff6961"               #Wrong, red
+                    self.lblTestWord.text = "[color={}]{}[/color]".format(textHighlight,mainWord)
+                    self.lblScore.text = "Score: %05d"%self.game_totalScore
+                    print("[color={}]{}[/color]".format(textHighlight,mainWord))
                 self.isBtnTimerActive = False
                 Clock.unschedule(self.btnTimeTrackUpdate)
 
@@ -294,10 +313,8 @@ class encodeThat(App):
         ms = MainScreen(name="main_screen")
         gs = GameScreen(name="game_screen")
         #st = SettingsScreen(name='settings_screen')
-        sm.add_widget(ms)
+        sm.add_widget(ms)               #Add screens
         sm.add_widget(gs)
-
-        #sm.add_widget(st)
         sm.current = "main_screen"
         return sm
 
