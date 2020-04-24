@@ -29,29 +29,30 @@ class MainScreen(Screen):
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
         uiHdl = uiElementHandler()
-        self.eList = []
+        eList = []
         self.layout = FloatLayout()
         self.lblTitle = uiHdl.makeLbl("[color=#baed91]Encode[/color] that!", {"x":0.25,"top":0.9}, fsize=70)
-        self.eList.append(self.lblTitle)
+        eList.append(self.lblTitle)
         self.btnStart = uiHdl.makeBtn("Start", {"x":0.25,"top":0.6}, self.startGameScreen, enableBtn=True, shint=(0.5,0.15))
-        self.eList.append(self.btnStart)
+        eList.append(self.btnStart)
         self.btnSettings = uiHdl.makeBtn("Settings", {"x":0.25,"top":0.4}, self.startSettingsScreen,enableBtn=True, shint=(0.5,0.15))
-        self.eList.append(self.btnSettings)
+        eList.append(self.btnSettings)
         self.btnQuit = uiHdl.makeBtn("Quit", {"x":0.25,"top":0.2}, self.exitGame,enableBtn=True, shint=(0.5,0.15))
-        self.eList.append(self.btnQuit)
+        eList.append(self.btnQuit)
 
-        for k in self.eList:
+        for k in eList:
             self.layout.add_widget(k)
-
         self.add_widget(self.layout)
 
-    def startGameScreen(self, value):
-        self.manager.transition.direction = 'left'
-        self.manager.current = "game_screen"
+    def startGameScreen(self, instance):
+        self.toNextScreen("left","game_screen")
 
-    def startSettingsScreen(self, value):
-        self.manager.transition.direction = 'up'
-        self.manager.current = "settings_screen"
+    def startSettingsScreen(self, instance):
+        self.toNextScreen("up","settings_screen")
+
+    def toNextScreen(self, direction, page):
+        self.manager.transition.direction = direction
+        self.manager.current = page
 
     def exitGame(self, value):
         App.get_running_app().stop()
@@ -70,7 +71,7 @@ class GameScreen(Screen):
     GAME_COUNTDOWN = 201                #ID for main game countdown
 
     #Game var
-    DURATION_GAME = 10                 #Game duration
+    DURATION_GAME = 30                 #Game duration
     WORDS_TOLOAD = 100                #Number of words to load
     gameActive = False
 
@@ -83,90 +84,54 @@ class GameScreen(Screen):
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
         self.layout = FloatLayout()
-        #Add UI elements
-        self.elemList = self.initUIElem(self.elemList)
-        #Add widgets
-        for el in self.elemList:
+        elemList = self.initUIElem(elemList)      #Add UI elements
+        for el in elemList:                       #Add widgets to layout
             self.layout.add_widget(el)
         self.add_widget(self.layout)
 
     def initUIElem(self,eList):     #Layout, element_list
         self.uiHandle = uiElementHandler()
-        #Score
-        self.lblScore = self.uiHandle.makeLbl("Score: 000000", {"x":0, "top":1})
+        self.lblScore = self.uiHandle.makeLbl("Score: 000000", {"x":0, "top":1})        #Score
         eList.append(self.lblScore)
-
-        #Score
-        self.lblTimer = self.uiHandle.makeLbl("Timer: ---", {"x":0.5, "top":1})
+        self.lblTimer = self.uiHandle.makeLbl("Timer: ---", {"x":0.5, "top":1})         #Timer
         eList.append(self.lblTimer)
-
-        #Word to code
-        self.lblTestWord = self.uiHandle.makeLbl('{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin..."), {"x":0.25, "y":0.66}, fsize=70)
+        self.lblTestWord = self.uiHandle.makeLbl('{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin..."), {"x":0.25, "y":0.66}, fsize=70)          #Test Word
         eList.append(self.lblTestWord)
-
-        #Code output
-        self.lblCodeOut = self.uiHandle.makeLbl('{} Code'.format("<>"), {"x":0.25, "y":0.5}, fsize=60)
+        self.lblCodeOut = self.uiHandle.makeLbl('{} Code'.format("<>"), {"x":0.25, "y":0.5}, fsize=60)                              #Decoded Morse output
         eList.append(self.lblCodeOut)
-
-        #User entry
-        self.lblUser = self.uiHandle.makeLbl("<—>", {"x":0.25, "y":0.25}, )
+        self.lblUser = self.uiHandle.makeLbl("<—>", {"x":0.25, "y":0.25}, )                                                         #User entry
         eList.append(self.lblUser)
-
-        #Dot
-        self.btnDot = self.uiHandle.makeBtn(
-            '•',
-            {"x":0, "right":0.5},  #Right ends at 0.5 of screen
-            self.dotPress
-            )
+        #           BUTTONS             #
+        self.btnDot = self.uiHandle.makeBtn('•',{"x":0, "right":0.5},self.dotPress)                                                 #Dot button, Right side ends at 0.5 of screen
         eList.append(self.btnDot)
-
-        #Dash
-        self.btnDash = self.uiHandle.makeBtn(
-            '—',
-            {"x":0.5, "left":0},  #Right ends at 0.5 of screen
-            self.dashPress
-            )
+        self.btnDash = self.uiHandle.makeBtn('—',{"x":0.5, "left":0},self.dashPress)                                                #Dash btn
         eList.append(self.btnDash)
-
-        #Start btn ontop of usercode
-        self.btnGo = self.uiHandle.makeBtn(
-            'Go',
-            {"x":0.25,"y":0.25},
-            self.goPress,
-            enableBtn = True,
-            shint=(0.5,0.15)
-        )
+        self.btnGo = self.uiHandle.makeBtn('Go',{"x":0.25,"y":0.25},self.goPress,enableBtn = True,shint=(0.5,0.15))                 #Start btn, ontop of usercode and shown before game starts
         eList.append(self.btnGo)
-
-        self.btnPause = self.uiHandle.makeBtn(
-            'Menu',
-            {"x":0.4,"top":1},
-            self.pausePress,
-            enableBtn = True,
-            shint=(0.2,0.1),
-            fsize=30
-        )
+        self.btnPause = self.uiHandle.makeBtn('Menu',{"x":0.4,"top":1},self.pausePress,enableBtn = True,shint=(0.2,0.1),fsize=30)   #Menu button
         eList.append(self.btnPause)
-
         return eList
 
     def dotPress(self, instance):
         print('\a')
-        self.setUserText("•",self.lblUser)
-        self.trackBtnTime()
+        self.setPlayerKeys("•")
 
     def dashPress(self, instance):
-        self.setUserText("—",self.lblUser)
+        self.setPlayerKeys("—")
+
+    def setPlayerKeys(self,text):
+        self.setUserText(text,self.lblUser)
         self.trackBtnTime()
 
     def setUserText(self, text, lbl):
         lbl.text += text
         if(len(lbl.text)>5):
-            self.resetTypedText(lbl)   #Reset text after more than 5 char
+            self.resetTypedText([lbl])   #Reset text after more than 5 char
 
-    #Clear text
-    def resetTypedText(self, lbl):
-        lbl.text = ""
+    #Clear list of text
+    def resetTypedText(self, lblList):
+        for e in lblList:
+            e.text = ""
 
     def showKeyGoBtn(self,showKeys, showGo):
         #Enable main btns
@@ -175,7 +140,6 @@ class GameScreen(Screen):
         self.btnGo.disabled = not showGo            #Hide go btn
         self.btnGo.opacity = 100 if showGo else 0   #Hide go button when active is true
         self.lblUser.text = "<->" if showGo else "" #Show placeholder text while waiting
-
 
     def resetGame(self):
         if(self.cTimerActive):
@@ -200,34 +164,16 @@ class GameScreen(Screen):
         if(self.cTimerActive):
             self.pauseTimer = True
         emList = []
+        #  New layout for dialog box
         popupLayout = FloatLayout()
-        btnResume = self.uiHandle.makeBtn(
-        'Resume',
-        {"x":0.25, "top":0.9},  #Right ends at 0.5 of screen
-        self.resumePress,
-        shint=(0.5,0.4),
-        enableBtn=True
-        )
+        btnResume = self.uiHandle.makeBtn('Resume',{"x":0.25, "top":0.9},  self.resumePress,shint=(0.5,0.4),enableBtn=True)           #Resumes game,
         emList.append(btnResume)
-
-        btnQuit = self.uiHandle.makeBtn(
-        'Quit',
-        {"x":0.25, "top":0.45},  #Right ends at 0.5 of screen
-        self.quitPress,
-        shint=(0.5,0.4),
-        enableBtn=True
-        )
+        btnQuit = self.uiHandle.makeBtn('Quit',{"x":0.25, "top":0.45}, self.quitPress,shint=(0.5,0.4),enableBtn=True)                 #Return to main menu
         emList.append(btnQuit)
-
         for el in emList:
             popupLayout.add_widget(el)
-
-        self.popupMenu = Popup(title='Game Paused',
-            content=popupLayout,
-            size_hint=(None, None), size=(400, 250),
-            auto_dismiss=False)
-
-        self.popupMenu.open()
+        popupMenu = Popup(title='Game Paused',content=popupLayout,size_hint=(None, None), size=(400, 250),auto_dismiss=False)     #Show Dialog box
+        popupMenu.open()
 
     def resumePress(self,instance):
         if(self.cTimerActive):
@@ -240,7 +186,6 @@ class GameScreen(Screen):
         self.manager.current = "main_screen"
         self.resetGame()
 
-
     #========================#
     #       GAME DATA
     #========================#
@@ -252,17 +197,27 @@ class GameScreen(Screen):
                 self.wordList.append(wrd.strip('\n').upper())               #Remove newline and capitalize all char, append to list
         print(self.wordList)
 
-
     def pickRandomWord(self):
-        rd_num = rd.randint(0,self.WORDS_TOLOAD)
+        rd_num = rd.randint(0,self.WORDS_TOLOAD-1)
         self.WORDS_TOLOAD-=1
+        self.lblScore.text =str(self.WORDS_TOLOAD)
         return self.wordList.pop(rd_num)
 
+    def decodeString(self, targetString):
+        if(targetString!=None):
+            mTranslate = {'•':0,'—':1}
+            codeToSend = ""
+            #Send the code
+            for a in range(len(targetString)):
+                codeToSend += str(mTranslate[targetString[a]])
+            codeToSend+='2'                                      #Add delimiter
+            #print(codeToSend)
+            smCode = MorseSM.MorseSM()
+            return smCode.getCharacter(codeToSend)
 
     #========================#
     #       TIMER(S)
     #========================#
-
     #Duration to countdown, seconds
     #Label to update
     def countdownTime(self,tm, call_id):
@@ -289,24 +244,20 @@ class GameScreen(Screen):
                         self.lblTimer.text = "Timer: ---"
                         self.showKeyGoBtn(False,False)
                     else:
-                        self.lblTimer.text = "Timer: %03d"%(self.timeLeft)
-                        if(len(self.lblCodeOut.text)>len(self.lblTestWord.text)):
+                        if(len(self.lblCodeOut.text)>=len(self.lblTestWord.text)):
                             self.lblTestWord.text = self.pickRandomWord()
                             self.lblCodeOut.text = ""
-
+                        self.lblTimer.text = "Timer: %03d"%(self.timeLeft)
                 if(not self.pauseTimer):
                     self.timeLeft -= 1
             else:
                 if(self.countdown_act_id == self.READY_COUNTDOWN):
-                    self.lblTestWord.text = ""
-                    self.resetTypedText(self.elemList[3])                                           #Set player text as empty
+                    self.resetTypedText([self.lblCodeOut,self.lblTestWord,self.lblUser])                                           #Set player text as empty
                     self.readyEvent.cancel() #Stop timer
                     self.lblTimer.text = "Timer: %03d"%(self.DURATION_GAME)
                     self.gameEvent = self.countdownTime(self.DURATION_GAME-1,self.GAME_COUNTDOWN)    #Start game timer
                 if(self.countdown_act_id == self.READY_COUNTDOWN):
                     self.gameEvent.cancel()                                                         #Stop Game timer
-
-
 
     #Keep track of button press
     def trackBtnTime(self):
@@ -322,19 +273,10 @@ class GameScreen(Screen):
                 self.timeAfterPress -= 100
             else:
                 Clock.unschedule(self.btnTimeTrackUpdate)
-                mTranslate = {'•':0,'—':1}
-                morseToDecode =  self.lblUser.text
-                if(morseToDecode!=None):
-                    codeToSend = ""
-                    for a in range(len(morseToDecode)):
-                        codeToSend += str(mTranslate[morseToDecode[a]])
-                    codeToSend+='2'                                      #Add delimiter
-                    #print(codeToSend)
-                    #Decode the morse
-                    smCode = MorseSM.MorseSM()
-                    decodedChar = smCode.getCharacter(codeToSend)
-                    if(decodedChar!=None):                                 #Only add valid characters
-                        self.lblCodeOut.text += decodedChar if decodedChar!="Idle" else ""
+                decodedChar = self.decodeString(self.lblUser.text)            #Get decoded string
+                if(decodedChar!=None):                                 #Only add valid characters
+                    #self.lblCodeOut.text += ("[color=#E5D209]{}[/color]".format(decodedChar)) if decodedChar!="Idle" else ""
+                    self.lblCodeOut.text += ("{}".format(decodedChar)) if len(decodedChar)<=1 else ""
                 self.lblUser.text = ""                          #Reset Users text
                 self.isBtnTimerActive = False
                 Clock.unschedule(self.btnTimeTrackUpdate)
@@ -358,7 +300,6 @@ class encodeThat(App):
         #sm.add_widget(st)
         sm.current = "main_screen"
         return sm
-
 
 if __name__ == "__main__":
     encodeThat().run()
