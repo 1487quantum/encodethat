@@ -29,16 +29,16 @@ class uiElementHandler():
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
-        uiHdl = uiElementHandler()
+        self.uiHdl = uiElementHandler()
         eList = []
         self.layout = FloatLayout()
-        self.lblTitle = uiHdl.makeLbl("[color=#baed91]Encode[/color] that!", {"x":0.25,"top":0.9}, fsize=70)
+        self.lblTitle = self.uiHdl.makeLbl("[color=#baed91]Encode[/color] that!", {"x":0.25,"top":0.9}, fsize=70)
         eList.append(self.lblTitle)
-        self.btnStart = uiHdl.makeBtn("Start", {"x":0.25,"top":0.6}, self.startGameScreen, enableBtn=True, shint=(0.5,0.15))
+        self.btnStart = self.uiHdl.makeBtn("Start", {"x":0.25,"top":0.6}, self.startGameScreen, enableBtn=True, shint=(0.5,0.15))
         eList.append(self.btnStart)
-        self.btnSettings = uiHdl.makeBtn("Settings", {"x":0.25,"top":0.4}, self.startSettingsScreen,enableBtn=True, shint=(0.5,0.15))
+        self.btnSettings = self.uiHdl.makeBtn("How to play?", {"x":0.25,"top":0.4}, self.startHowTo,enableBtn=True, shint=(0.5,0.15))
         eList.append(self.btnSettings)
-        self.btnQuit = uiHdl.makeBtn("Quit", {"x":0.25,"top":0.2}, self.exitGame,enableBtn=True, shint=(0.5,0.15))
+        self.btnQuit = self.uiHdl.makeBtn("Quit", {"x":0.25,"top":0.2}, self.exitGame,enableBtn=True, shint=(0.5,0.15))
         eList.append(self.btnQuit)
 
         for k in eList:
@@ -48,12 +48,22 @@ class MainScreen(Screen):
     def startGameScreen(self, instance):
         self.toNextScreen("left","game_screen")
 
-    def startSettingsScreen(self, instance):
-        self.toNextScreen("up","settings_screen")
+    def startHowTo(self, instance):
+        #  New layout for dialog box
+        popupLayout = FloatLayout()
+        self.lblInstructions = self.uiHdl.makeLbl("[color=#baed91]Encode[/color] that!", {"x":0.25,"top":0.9}, fsize=70)
+        popupLayout.add_widget(self.lblInstructions)
+        self.btnCloseHTB = self.uiHdl.makeBtn("Close", {"x":0.25,"top":0.2}, self.closeHTB, enableBtn=True, shint=(0.5,0.15), fsize=30)
+        popupLayout.add_widget(self.btnCloseHTB)
+        self.popupHTB = Popup(title='Instructions',content=popupLayout,size_hint=(None, None), size=(600, 400),auto_dismiss=False)     #Show Dialog box
+        self.popupHTB.open()
 
     def toNextScreen(self, direction, page):
         self.manager.transition.direction = direction
         self.manager.current = page
+
+    def closeHTB(self, instance):
+        self.popupHTB.dismiss()
 
     def exitGame(self, value):
         App.get_running_app().stop()
@@ -91,13 +101,13 @@ class GameScreen(Screen):
     def initUIElem(self):       #Layout, element_list
         eList = []              #Temp list
         self.uiHandle = uiElementHandler()
-        self.lblScore = self.uiHandle.makeLbl("Score: 000000", {"x":0, "top":1})        #Score
+        self.lblScore = self.uiHandle.makeLbl("Score: ------", {"x":0, "top":1})        #Score
         eList.append(self.lblScore)
         self.lblTimer = self.uiHandle.makeLbl("Timer: ---", {"x":0.5, "top":1})         #Timer
         eList.append(self.lblTimer)
         self.lblTestWord = self.uiHandle.makeLbl('{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin..."), {"x":0.25, "y":0.66}, fsize=70)          #Test Word
         eList.append(self.lblTestWord)
-        self.lblCodeOut = self.uiHandle.makeLbl('{} Code'.format("<>"), {"x":0.25, "y":0.5}, fsize=60)                              #Decoded Morse output
+        self.lblCodeOut = self.uiHandle.makeLbl("", {"x":0.25, "y":0.5}, fsize=60)                              #Decoded Morse output
         eList.append(self.lblCodeOut)
         self.lblUser = self.uiHandle.makeLbl("<—>", {"x":0.25, "y":0.25}, )                                                         #User entry
         eList.append(self.lblUser)
@@ -141,7 +151,10 @@ class GameScreen(Screen):
         if(self.cTimerActive):
             Clock.unschedule(self.onUpdateTime) #Stop timer
             self.cTimerActive = False
+        self.lblScore.text = "Score: -----"
         self.lblTimer.text = "Timer: ---"
+        self.resetTypedText([self.lblCodeOut])
+        self.game_totalScore = 0
         self.lblTestWord.text = '{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin...")
         self.showKeyGoBtn(False,True)
 
@@ -252,9 +265,11 @@ class GameScreen(Screen):
                     if(self.timeLeft==0):
                         self.lblTestWord.text = "Game Over"
                         self.lblTimer.text = "Timer: ---"
+                        self.gameActive = False
                         self.showKeyGoBtn(False,False)
                     else:
                         self.lblTimer.text = "Timer: %03d"%(self.timeLeft)
+                        self.gameActive = True
                 if(not self.pauseTimer):
                     self.timeLeft -= 1
             else:
@@ -309,7 +324,8 @@ class GameScreen(Screen):
                 Clock.unschedule(self.btnTimeTrackUpdate)
 
     def loadNextWord(self,dt):
-        self.nextWord()
+        if(self.gameActive):
+            self.nextWord()
         Clock.unschedule(self.beforeNextWord)   #Unschedule clock once done
 
 class encodeThat(App):
