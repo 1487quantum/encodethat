@@ -16,8 +16,8 @@ import MorseSM
 class uiElementHandler():
     def makeLbl(self,title, phint, fsize=None):
         shint = (0.5,0.1)
-        h_align = 'center'
-        v_align = 'middle'
+        h_align = "center"
+        v_align = "middle"
         mk_up = True        #Enable Markup for all text
         return Label(text=str(title), font_size=(fsize if fsize!=None else 30), size_hint=shint, pos_hint=phint, halign = h_align, valign=v_align, markup=mk_up)    #Set to 30 if fonsize not declared
 
@@ -55,7 +55,7 @@ class MainScreen(Screen):
         popupLayout.add_widget(self.lblInstructions)
         self.btnCloseHTB = self.uiHdl.makeBtn("Close", {"x":0.25,"top":0.2}, self.closeHTB, enableBtn=True, shint=(0.5,0.15), fsize=30)
         popupLayout.add_widget(self.btnCloseHTB)
-        self.popupHTB = Popup(title='Instructions',content=popupLayout,size_hint=(None, None), size=(600, 400),auto_dismiss=False)     #Show Dialog box
+        self.popupHTB = Popup(title="Instructions",content=popupLayout,size_hint=(None, None), size=(600, 400),auto_dismiss=False)     #Show Dialog box
         self.popupHTB.open()
 
     def toNextScreen(self, direction, page):
@@ -80,7 +80,7 @@ class GameScreen(Screen):
     GAME_COUNTDOWN = 201                #ID for main game countdown
 
     #Game var
-    DURATION_GAME = 120                  #Game duration
+    DURATION_GAME = 10                  #Game duration
     WORDS_TOLOAD = 100                  #Number of words to load
     gameActive = False
     game_totalScore = 0
@@ -93,6 +93,9 @@ class GameScreen(Screen):
 
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
+        #Attach _keyboard
+        self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self.layout = FloatLayout()
         for el in self.initUIElem():                       #Add UI elements, then Add widgets to layout from list
             self.layout.add_widget(el)
@@ -105,20 +108,20 @@ class GameScreen(Screen):
         eList.append(self.lblScore)
         self.lblTimer = self.uiHandle.makeLbl("Timer: ---", {"x":0.5, "top":1})         #Timer
         eList.append(self.lblTimer)
-        self.lblTestWord = self.uiHandle.makeLbl('{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin..."), {"x":0.25, "y":0.66}, fsize=70)          #Test Word
+        self.lblTestWord = self.uiHandle.makeLbl("{} [color=#E5D209]{}[/color] {}".format("Press","Go","to begin..."), {"x":0.25, "y":0.66}, fsize=70)          #Test Word
         eList.append(self.lblTestWord)
         self.lblCodeOut = self.uiHandle.makeLbl("", {"x":0.25, "y":0.5}, fsize=60)                              #Decoded Morse output
         eList.append(self.lblCodeOut)
         self.lblUser = self.uiHandle.makeLbl("<—>", {"x":0.25, "y":0.25}, )                                                         #User entry
         eList.append(self.lblUser)
         #           BUTTONS             #
-        self.btnDot = self.uiHandle.makeBtn('•',{"x":0, "right":0.5},self.dotPress)                                                 #Dot button, Right side ends at 0.5 of screen
+        self.btnDot = self.uiHandle.makeBtn("•",{"x":0, "right":0.5},self.dotPress)                                                 #Dot button, Right side ends at 0.5 of screen
         eList.append(self.btnDot)
-        self.btnDash = self.uiHandle.makeBtn('—',{"x":0.5, "left":0},self.dashPress)                                                #Dash btn
+        self.btnDash = self.uiHandle.makeBtn("—",{"x":0.5, "left":0},self.dashPress)                                                #Dash btn
         eList.append(self.btnDash)
-        self.btnGo = self.uiHandle.makeBtn('Go',{"x":0.25,"y":0.25},self.goPress,enableBtn = True,shint=(0.5,0.15))                 #Start btn, ontop of usercode and shown before game starts
+        self.btnGo = self.uiHandle.makeBtn("Go",{"x":0.25,"y":0.25},self.goPress,enableBtn = True,shint=(0.5,0.15))                 #Start btn, ontop of usercode and shown before game starts
         eList.append(self.btnGo)
-        self.btnPause = self.uiHandle.makeBtn('Menu',{"x":0.4,"top":1},self.pausePress,enableBtn = True,shint=(0.2,0.1),fsize=30)   #Menu button
+        self.btnPause = self.uiHandle.makeBtn("Menu",{"x":0.4,"top":1},self.pausePress,enableBtn = True,shint=(0.2,0.1),fsize=30)   #Menu button
         eList.append(self.btnPause)
         return eList
 
@@ -155,7 +158,7 @@ class GameScreen(Screen):
         self.lblTimer.text = "Timer: ---"
         self.resetTypedText([self.lblCodeOut])
         self.game_totalScore = 0
-        self.lblTestWord.text = '{} [color=#E5D209]{}[/color] {}'.format("Press","Go","to begin...")
+        self.lblTestWord.text = "{} [color=#E5D209]{}[/color] {}".format("Press","Go","to begin...")
         self.showKeyGoBtn(False,True)
 
     #=================================#
@@ -165,11 +168,24 @@ class GameScreen(Screen):
         if(self.cTimerActive):
             self.pauseTimer = stateActive
 
+
+    def _keyboard_closed(self):
+        self._keyboard.unbind(on_key_down=self._on_keyboard_down)
+        self._keyboard = None
+
+    def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
+        if(self.gameActive):
+            if keycode[1] == "left":
+                self.dotPress(None)
+            elif keycode[1] == "right":
+                self.dashPress(None)
+        return True
+
     #=================================#
     #       BUTTON CALLBACK(S)
     #=================================#
     def dotPress(self, instance):
-        print('\a')
+        print("\a")
         self.setPlayerKeys("•")
 
     def dashPress(self, instance):
@@ -188,13 +204,13 @@ class GameScreen(Screen):
         emList = []
         #  New layout for dialog box
         popupLayout = FloatLayout()
-        btnResume = self.uiHandle.makeBtn('Resume',{"x":0.25, "top":0.9},  self.resumePress,shint=(0.5,0.4),enableBtn=True)           #Resumes game,
+        btnResume = self.uiHandle.makeBtn("Resume",{"x":0.25, "top":0.9},  self.resumePress,shint=(0.5,0.4),enableBtn=True)           #Resumes game,
         emList.append(btnResume)
-        btnQuit = self.uiHandle.makeBtn('Quit',{"x":0.25, "top":0.45}, self.quitPress,shint=(0.5,0.4),enableBtn=True)                 #Return to main menu
+        btnQuit = self.uiHandle.makeBtn("Quit",{"x":0.25, "top":0.45}, self.quitPress,shint=(0.5,0.4),enableBtn=True)                 #Return to main menu
         emList.append(btnQuit)
         for el in emList:
             popupLayout.add_widget(el)
-        self.popupMenu = Popup(title='Game Paused',content=popupLayout,size_hint=(None, None), size=(400, 250),auto_dismiss=False)     #Show Dialog box
+        self.popupMenu = Popup(title="Game Paused",content=popupLayout,size_hint=(None, None), size=(400, 250),auto_dismiss=False)     #Show Dialog box
         self.popupMenu.open()
 
     def resumePress(self,instance):
@@ -203,7 +219,7 @@ class GameScreen(Screen):
 
     def quitPress(self,instance):
         self.popupMenu.dismiss()
-        self.manager.transition.direction = 'right'
+        self.manager.transition.direction = "right"
         self.manager.current = "main_screen"
         self.resetGame()
 
@@ -215,7 +231,7 @@ class GameScreen(Screen):
         self.wordList =  []                    #New list to store words
         for idx, wrd in enumerate(f):
             if(idx<int(self.WORDS_TOLOAD)):
-                self.wordList.append(wrd.strip('\n').upper())               #Remove newline and capitalize all char, append to list
+                self.wordList.append(wrd.strip("\n").upper())               #Remove newline and capitalize all char, append to list
         print(self.wordList)
 
     def pickRandomWord(self):
@@ -229,12 +245,12 @@ class GameScreen(Screen):
 
     def decodeString(self, targetString):
         if(targetString!=None):
-            mTranslate = {'•':0,'—':1}
+            mTranslate = {"•":0,"—":1}
             codeToSend = ""
             #Send the code
             for a in range(len(targetString)):
                 codeToSend += str(mTranslate[targetString[a]])
-            codeToSend+='2'                                      #Add delimiter
+            codeToSend+="2"                                      #Add delimiter
             #print(codeToSend)
             smCode = MorseSM.MorseSM()
             return smCode.getCharacter(codeToSend)
@@ -259,12 +275,15 @@ class GameScreen(Screen):
                     if(self.timeLeft==0):
                         self.lblTestWord.text = "Begin!"
                         self.lblTimer.text = "Timer: ---"
+                        self.lblScore.text = "Score: %06s"%""
                     else:
                         self.lblTestWord.text = str(self.timeLeft)
                 elif(self.countdown_act_id == self.GAME_COUNTDOWN):
                     if(self.timeLeft==0):
                         self.lblTestWord.text = "Game Over"
                         self.lblTimer.text = "Timer: ---"
+                        self.lblCodeOut.text = "[color=E5D209]"+self.lblScore.text+"[/color]"
+                        self.lblScore.text = "Score: ------"
                         self.gameActive = False
                         self.showKeyGoBtn(False,False)
                     else:
@@ -303,23 +322,24 @@ class GameScreen(Screen):
                     self.lblCodeOut.text += ("{}".format(decodedChar)) if len(decodedChar)<=1 else ""
                 self.resetTypedText([self.lblUser])                       #Reset Users text
 
-                #Check text
-                mainWord = MarkupLabel(self.lblTestWord.text).markup[1]
-                if(len(self.lblCodeOut.text)>len(mainWord)):
-                    #Get new word, Reset text
-                    self.nextWord()
-                elif(len(self.lblCodeOut.text)>0):                              #Highlight correct/wrong
-                    self.lblScore.text = str(mainWord[len(self.lblCodeOut.text)-1])
-                    if(mainWord[len(self.lblCodeOut.text)-1]==decodedChar):    #Extract text from markup, then extract char at index
-                        textHighlight = "#baed91"               #Correct, green
-                        self.game_totalScore+=10
-                    else:
-                        textHighlight = "#ff6961"               #Wrong, red
-                    self.lblTestWord.text = "[color={}]{}[/color]".format(textHighlight,mainWord)
-                    self.lblScore.text = "Score: %05d"%self.game_totalScore
-                    print(len(self.lblCodeOut.text),len(mainWord))
-                    if(len(self.lblCodeOut.text)==len(mainWord)):         #Check if it's last word
-                        self.beforeNextWord = Clock.schedule_once(self.loadNextWord,0.5)                     #Wait for 0.5 second before showing next word
+                #Check text only when game is active
+                if(self.gameActive):
+                    mainWord = MarkupLabel(self.lblTestWord.text).markup[1]
+                    if(len(self.lblCodeOut.text)>len(mainWord)):
+                        #Get new word, Reset text
+                        self.nextWord()
+                    elif(len(self.lblCodeOut.text)>0):                              #Highlight correct/wrong
+                        self.lblScore.text = str(mainWord[len(self.lblCodeOut.text)-1])
+                        if(mainWord[len(self.lblCodeOut.text)-1]==decodedChar):    #Extract text from markup, then extract char at index
+                            textHighlight = "#baed91"               #Correct, green
+                            self.game_totalScore+=10
+                        else:
+                            textHighlight = "#ff6961"               #Wrong, red
+                        self.lblTestWord.text = "[color={}]{}[/color]".format(textHighlight,mainWord)
+                        self.lblScore.text = "Score: %05d"%self.game_totalScore
+                        print(len(self.lblCodeOut.text),len(mainWord))
+                        if(len(self.lblCodeOut.text)==len(mainWord)):         #Check if it's last word
+                            self.beforeNextWord = Clock.schedule_once(self.loadNextWord,0.5)                     #Wait for 0.5 second before showing next word
                 self.isBtnTimerActive = False
                 Clock.unschedule(self.btnTimeTrackUpdate)
 
