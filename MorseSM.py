@@ -1,29 +1,28 @@
 from libdw import sm
 
-#Input: 0->Dot, 1->Dash
 class MorseSM(sm.SM):
-    #Dictionary of traversal paths
-    #Elem: 0->Dot, 1->Dash, 2->Return val to program
-    fsmTree = {
-                'Idle':['E','T','*'],       #Lv 0
-                'E':['I','A','*'],          #Lv 1
-                'T':['N','M','*'],
-                'I':['S','U','*'],          #Lv 2
-                'A':['R','W','*'],
-                'N':['D','K','*'],
-                'M':['G','O','*'],
-                'S':['H','V','*'],          #Lv 3
-                'U':['F','*','*'],
-                'R':['L','*','*'],
-                'W':['P','J','*'],
-                'D':['B','X','*'],
-                'K':['C','Y','*'],
-                'G':['Z','Q','*'],
-                'O':['*','*','*'],
-                '*':['*','*','*']
-                }
-
     def __init__(self):
+        #Input: 0->Dot, 1->Dash
+        #Dictionary of traversal paths
+        #Elem: 0->Dot, 1->Dash, 2->Return val to program
+        self.fsmTree = {
+                    'Idle':['E','T','*'],       #Lv 0
+                    'E':['I','A','*'],          #Lv 1
+                    'T':['N','M','*'],
+                    'I':['S','U','*'],          #Lv 2
+                    'A':['R','W','*'],
+                    'N':['D','K','*'],
+                    'M':['G','O','*'],
+                    'S':['H','V','*'],          #Lv 3
+                    'U':['F','*','*'],
+                    'R':['L','*','*'],
+                    'W':['P','J','*'],
+                    'D':['B','X','*'],
+                    'K':['C','Y','*'],
+                    'G':['Z','Q','*'],
+                    'O':['*','*','*'],
+                    '*':['*','*','*']
+                    }
         #Add level 4 items for remaining characters
         charToAdd = ['H','V','F','L','P','J','B','X','C','Y','Z','Q']
         for ch in charToAdd:
@@ -57,17 +56,17 @@ class MorseSM(sm.SM):
         else:
             return 'Error: String length exceeded!'
 
-    def testAllCharacters(self):
-        res = []
-        for i in range(5):
-            for j in range(2**i):
-                testCode = "%0*d2"%(i,int(bin(j)[2:]))       #Remove 1st 2 char, convert back to int
-                res_char = MorseSM().transduce(testCode)[-1]
-                print("%s: %s"%(testCode, res_char))
-                res.append(res_char)
-        return res
+    # def testAllCharacters(self):
+    #     res = []
+    #     for i in range(5):
+    #         for j in range(2**i):
+    #             testCode = "%0*d2"%(i,int(bin(j)[2:]))       #Remove 1st 2 char, convert back to int
+    #             res_char = MorseSM().transduce(testCode)[-1]
+    #             print("%s: %s"%(testCode, res_char))
+    #             res.append(res_char)
+    #     return res
 
-    def exceptionTest(self):                    #Test error catching
-        res = ["010111","011@","011","01112"]
-        for el in res:
-            print('Test','Pass->' if len(gg.getCharacter(el))==1 else 'Fail->',gg.getCharacter(el))
+    # def exceptionTest(self):                    #Test error catching
+    #     res = ["010111","011@","011","01112"]
+    #     for el in res:
+    #         print('Test','Pass->' if len(gg.getCharacter(el))==1 else 'Fail->',gg.getCharacter(el))
