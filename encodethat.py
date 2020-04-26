@@ -129,6 +129,8 @@ class GameScreen(Screen):
     def resetGame(self):
         self.gTimerState["preGame"] = False
         self.gTimerState["mainGame"] = False
+        self.gTimerState["keysActive"] = False
+        self.pauseGameState(False)
         for tm in [self.readyEventClock,self.btnTrackClk,self.gameEventClock,self.beforeNextWordClk]:   #Cancel all active timers
             self.cancelTimer(tm)
         self.setScoreTimerText("-----","---")
@@ -415,6 +417,6 @@ class encodeThat(App):
         sm.add_widget(gs)
         sm.current = "main_screen"
         return sm
-        
+
 if __name__ == "__main__":
     encodeThat().run()
