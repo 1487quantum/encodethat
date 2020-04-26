@@ -8,13 +8,15 @@ from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.popup import Popup
-import time
 import random as rd
 from libdw import sm
 
 class MainScreen(Screen):           #Home screen
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
+        self.populateUI()
+
+    def populateUI(self):
         layout_main = BoxLayout(padding=(100,30),orientation="vertical")
         self.lblTitle = Label(text="[color=#baed91]Encode[/color] that!", font_size=70, size_hint=(1,0.4), halign = "center", valign="middle", markup=True)
         self.btnStart = Button(text="Start",font_size=35,size_hint=(1,0.2), on_press=self.startGameScreen, disabled=False)
@@ -26,6 +28,11 @@ class MainScreen(Screen):           #Home screen
         layout_main.add_widget(self.btnQuit)
         self.add_widget(layout_main)
 
+    def toNextScreen(self, direction, page):
+        self.manager.transition.direction = direction
+        self.manager.current = page
+
+    #Callback functions
     def startGameScreen(self, instance):
         self.toNextScreen("left","game_screen")
 
@@ -38,14 +45,10 @@ class MainScreen(Screen):           #Home screen
         self.popupHTB = Popup(title="Instructions",content=popupLayout,size_hint=(None, None), size=(600, 400),auto_dismiss=False)     #Show Dialog box
         self.popupHTB.open()
 
-    def toNextScreen(self, direction, page):
-        self.manager.transition.direction = direction
-        self.manager.current = page
-
     def closeHTB(self, instance):
         self.popupHTB.dismiss()
 
-    def exitGame(self, value):
+    def exitGame(self, instance):
         App.get_running_app().stop()
         Window.close()
 
@@ -56,39 +59,11 @@ class GameScreen(Screen):
 
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
-        #Attach _keyboard
-        self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
-        self._keyboard.bind(on_key_down=self._on_keyboard_down)
-        layout_game = BoxLayout(padding=20,orientation="vertical")
-        #Load gameConfig
-        self.loadConfig()
-        #Add UI elements
-        #Top section
-        topSection = BoxLayout(padding=(40,0), size_hint=(1,0.15), orientation="horizontal")
-        self.lblScore = Label(text="Score: ------", font_size=35,  size_hint=(0.35,1)) #Score
-        self.btnMenu = Button(text="Menu",font_size=30,size_hint=(0.3,1),on_press=self.pausePress) #Padding: x,y
-        self.lblTimer = Label(text="Timer: ---", font_size=35,  size_hint=(0.35,1)) #Time
-        topSection.add_widget(self.lblScore)
-        topSection.add_widget(self.btnMenu)
-        topSection.add_widget(self.lblTimer)
-        #Mid section
-        self.lblTestWord = Label(text="{} [color=#E5D209]{}[/color] {}".format("Press","Go","to begin..."), font_size=70,  size_hint=(1, .3),markup=True) #Score
-        self.lblCodeOut = Label(text="", font_size=40,  size_hint=(1, .2), halign="center", markup=True) #Codeout
-        self.lblUser = Label(text="<->", font_size=30,  size_hint=(1, .1)) #User
-        self.btnGo = Button(text="Go",font_size=30,size_hint=(1,.15),on_press=self.goPress)
-        #Bottom section
-        btmSection = BoxLayout(padding=(60,10), size_hint=(1,0.2), orientation="horizontal")
-        self.btnDot = Button(text="•",size_hint=(0.5, 1),on_press=self.dotPress, disabled=True)                   #Dot button, Right side ends at 0.5 of screen
-        self.btnDash = Button(text="—",size_hint=(0.5, 1),on_press=self.dashPress, disabled=True)                 #Dash btn
-        btmSection.add_widget(self.btnDot)
-        btmSection.add_widget(self.btnDash)
-        #Add main widgets
-        layout_game.add_widget(topSection)
-        layout_game.add_widget(self.lblTestWord)
-        layout_game.add_widget(self.lblCodeOut)
-        layout_game.add_widget(self.lblUser)
-        layout_game.add_widget(self.btnGo)
-        layout_game.add_widget(btmSection)
+        self._bindKeyboard()                                                               #Attach _keyboard
+        self._loadConfig()                                                                 #Load gameConfig
+        layout_game = BoxLayout(padding=20,orientation="vertical")                        #Add UI elements
+        for sct in [self.addTopSection(),self.addMidSection(),self.addBtmSection()]:      #Add main widgets
+            layout_game.add_widget(sct)
         self.add_widget(layout_game)
         #Init timers
         self.readyEventClock=None
@@ -99,6 +74,36 @@ class GameScreen(Screen):
     #=================#
     #       UI
     #================#
+    def addTopSection(self):
+        topSection = BoxLayout(padding=(40,0), size_hint=(1,0.15), orientation="horizontal")
+        self.lblScore = Label(text="Score: ------", font_size=35,  size_hint=(0.35,1)) #Score
+        self.btnMenu = Button(text="Menu",font_size=30,size_hint=(0.3,1),on_press=self.pausePress) #Padding: x,y
+        self.lblTimer = Label(text="Timer: ---", font_size=35,  size_hint=(0.35,1)) #Time
+        topSection.add_widget(self.lblScore)
+        topSection.add_widget(self.btnMenu)
+        topSection.add_widget(self.lblTimer)
+        return topSection
+
+    def addMidSection(self):
+        midSection = BoxLayout(orientation="vertical")
+        self.lblTestWord = Label(text="{} [color=#E5D209]{}[/color] {}".format("Press","Go","to begin..."), font_size=70,  size_hint=(1, .3),markup=True) #Score
+        self.lblCodeOut = Label(text="", font_size=40,  size_hint=(1, .2), halign="center", markup=True) #Codeout
+        self.lblUser = Label(text="<->", font_size=30,  size_hint=(1, .1)) #User
+        self.btnGo = Button(text="Go",font_size=30,size_hint=(1,.15),on_press=self.goPress)
+        midSection.add_widget(self.lblTestWord)
+        midSection.add_widget(self.lblCodeOut)
+        midSection.add_widget(self.lblUser)
+        midSection.add_widget(self.btnGo)
+        return midSection
+
+    def addBtmSection(self):
+        btmSection = BoxLayout(padding=(60,10), size_hint=(1,0.2), orientation="horizontal")
+        self.btnDot = Button(text="•",size_hint=(0.5, 1),on_press=self.dotPress, disabled=True)                   #Dot button, Right side ends at 0.5 of screen
+        self.btnDash = Button(text="—",size_hint=(0.5, 1),on_press=self.dashPress, disabled=True)                 #Dash btn
+        btmSection.add_widget(self.btnDot)
+        btmSection.add_widget(self.btnDash)
+        return btmSection
+
     def setPlayerKeys(self,text):
         self.setUserText(text,self.lblUser)
         self.trackBtnTime()
@@ -124,11 +129,8 @@ class GameScreen(Screen):
     def resetGame(self):
         self.gTimerState["preGame"] = False
         self.gTimerState["mainGame"] = False
-         #Try cancelling all active timers
-        self.cancelTimer(self.readyEventClock)
-        self.cancelTimer(self.btnTrackClk)
-        self.cancelTimer(self.gameEventClock)
-        self.cancelTimer(self.beforeNextWordClk)
+        for tm in [self.readyEventClock,self.btnTrackClk,self.gameEventClock,self.beforeNextWordClk]:   #Cancel all active timers
+            self.cancelTimer(tm)
         self.setScoreTimerText("-----","---")
         self.resetTypedText([self.lblCodeOut])
         self.game_totalScore = 0
@@ -146,6 +148,10 @@ class GameScreen(Screen):
     #=================================#
     def pauseGameState(self, stateActive):
         self.gTimerState["menuPause"] = stateActive
+
+    def _bindKeyboard(self):
+        self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        self._keyboard.bind(on_key_down=self._on_keyboard_down)
 
     def _keyboard_closed(self):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
@@ -169,7 +175,6 @@ class GameScreen(Screen):
         self.setPlayerKeys("—")
 
     def goPress(self, instance):
-        #Change game title, countdown from 3 then start
         self.lblTestWord.text = "Ready?"
         self.gTimerState["preGame"] = True
         self.readyEventClock = self.countdownTime(3)
@@ -199,14 +204,13 @@ class GameScreen(Screen):
     #==============================#
     #       DATA MANIPULATION
     #==============================#
-    def loadConfig(self):
+    def _loadConfig(self):
         cg = open("res/game.cfg")
         self.gameConfig = {}
         for cfg in cg:
             if(cfg[0]!="#"):
                 a = cfg.split(":")
                 self.gameConfig[a[0]] = int(a[1].strip("\n").strip())
-        print(self.gameConfig)
 
     def updateHighscore(self, new_score):
         lines = open("res/game.cfg").read().splitlines()
@@ -219,7 +223,6 @@ class GameScreen(Screen):
         for idx, wrd in enumerate(f):
             if(idx<int(self.gameConfig["LOAD_WORDS"])):
                 self.wordList.append(wrd.strip("\n").upper())               #Remove newline and capitalize all char, append to list
-        #print(self.wordList)
 
     def pickRandomWord(self):
         rd_num = rd.randint(0,self.gameConfig["LOAD_WORDS"]-1)
@@ -234,12 +237,10 @@ class GameScreen(Screen):
         if(targetString!=None):
             mTranslate = {"•":0,"—":1}
             codeToSend = ""
-            #Send the code
-            for a in range(len(targetString)):
+            for a in range(len(targetString)):                          #Send the code
                 codeToSend += str(mTranslate[targetString[a]])
-            codeToSend+="2"                                      #Add delimiter
-            #print(codeToSend)
-            smCode = MorseSM.MorseSM()
+            codeToSend+="2"                                             #Add delimiter
+            smCode = MorseSM()
             return smCode.getCharacter(codeToSend)
 
     def checkCorrect(self, testWordStr, inputStr, decodedChar):
@@ -248,15 +249,14 @@ class GameScreen(Screen):
             if(len(inputStr)>len(mainWord)):
                 self.nextWord()                                 #Get new word, Reset text
             elif(len(inputStr)>0):                              #Highlight correct/wrong
-                #self.lblScore.text = str(mainWord[len(inputStr)-1])
                 if(mainWord[len(inputStr)-1]==decodedChar):    #Extract text from markup, then extract char at index
-                    textHighlight = "#baed91"               #Correct, green
+                    textHighlight = "#baed91"                   #Correct, green
                     self.game_totalScore+=10
                 else:
-                    textHighlight = "#ff6961"               #Wrong, red
+                    textHighlight = "#ff6961"                   #Wrong, red
                 self.lblTestWord.text = "[color={}]{}[/color]".format(textHighlight,mainWord)
                 self.lblScore.text = "Score: %05d"%self.game_totalScore
-                if(len(inputStr)==len(mainWord)):         #Check if it's last word
+                if(len(inputStr)==len(mainWord)):               #Check if it's last word
                     self.cancelTimer(self.beforeNextWordClk)
                     self.beforeNextWordClk = Clock.schedule_once(self.loadNextWord,0.5)                     #Wait for 0.5 second before showing next word
 
@@ -264,7 +264,6 @@ class GameScreen(Screen):
     #       TIMER(S)
     #========================#
     #Duration to countdown, seconds
-    #Label to update
     def countdownTime(self,tm):
         self.timeLeft["game"] = tm
         self.gTimerState["menuPause"] = False
@@ -308,10 +307,9 @@ class GameScreen(Screen):
 
     #Keep track of button press, and to cross check if the character is decoded correctly
     def trackBtnTime(self):
-        #Reset timing
-        self.timeLeft["btnPress"] = self.gameConfig["resetTime"]
+        self.timeLeft["btnPress"] = self.gameConfig["resetTime"]        #Reset timing
         if(not self.gTimerState["keysActive"]):
-            self.gTimerState["keysActive"] = True         #Start btn timer tracking
+            self.gTimerState["keysActive"] = True                       #Start btn timer tracking
             self.cancelTimer(self.btnTrackClk)
             self.btnTrackClk = Clock.schedule_interval(self.btnTimeTrackUpdate, self.gameConfig["chkBtnInterval"]/1000) #Refresh every 200ms
 
@@ -336,21 +334,6 @@ class GameScreen(Screen):
     def cancelTimer(self, timerName):
         if(timerName!=None):
             Clock.unschedule(timerName)
-
-class encodeThat(App):
-    def build(self, **kwargs):
-        super(encodeThat, self).__init__(**kwargs)
-        Window.size = (800, 500)    #Set window size
-        self.title = "Encode that!"
-        sm = ScreenManager()
-        ms = MainScreen(name="main_screen")
-        gs = GameScreen(name="game_screen")
-        sm.add_widget(ms)               #Add screens
-        sm.add_widget(gs)
-        sm.current = "main_screen"
-        return sm
-
-
 
 class MorseSM(sm.SM):
     def __init__(self):
@@ -420,5 +403,18 @@ class MorseSM(sm.SM):
     #     for el in res:
     #         print('Test','Pass->' if len(gg.getCharacter(el))==1 else 'Fail->',gg.getCharacter(el))
 
+class encodeThat(App):
+    def build(self, **kwargs):
+        super(encodeThat, self).__init__(**kwargs)
+        Window.size = (800, 500)    #Set window size
+        self.title = "Encode that!"
+        sm = ScreenManager()
+        ms = MainScreen(name="main_screen")
+        gs = GameScreen(name="game_screen")
+        sm.add_widget(ms)               #Add screens
+        sm.add_widget(gs)
+        sm.current = "main_screen"
+        return sm
+        
 if __name__ == "__main__":
     encodeThat().run()
