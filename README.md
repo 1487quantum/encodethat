@@ -82,6 +82,19 @@ The user would entered the corresponding Morse code for the specific character, 
 
 After which, a "2" would be appended to the end of the string as a delimiter (To mark the end of the Morse code). For example, a "-.-" would be encoded as "1012". The encoded string would then be sent to the MorseSM class, which would decode the given sequence and return the corresponding character. If the given encoded string is given, the error returned would be ignored and no new character would be appended to the User's types text.
 
+## Morse Code - Processing
+
+The process the Morse code input from the player, a FSM (Finite State Machine) is used. The diagram below shows the FSM, where **S** represents the *dot* input and **L** represents the *dash* input. The FSM would begin in an Idle state, which waits for the subsequent input from the user for a fixed amount of time. Once the time is up, the state of the FSM (the alphabet character) would be returned.
+
+For example, the FSM is set to wait for only 2 seconds. If the user inputs a dot-dash-dot and pauses for 2 seconds, the FSM would be at the *R* state, which would be returned.
+
+![MorseTree](res/FSM.svg)
+
+Most of the states end at around 4 levels, except for the following states:
+
+- *O*: Ends at 3rd level, missing **L** and **S**.
+- *R, U*: Missing 4th level (state) for **L**.
+
 The section below would further elaborate the classes and the functions utilized in the game.
 
 ### *class* encodeThat()
