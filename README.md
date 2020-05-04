@@ -26,6 +26,11 @@ If not, install the required dependencies via ```pip3 ```:
 $ pip3 install libdw kivy==1.11.1
 ```
 
+> If there are issues running Kivy on Ubuntu based system, you can try installing through apt instead: 
+> ```bash 
+> $ sudo apt install python3-kivy python3-sdl2
+> ```
+
 
 
 ## Gamplay
